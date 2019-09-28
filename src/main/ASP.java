@@ -1,6 +1,12 @@
+package main;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.List;
+import java.util.PriorityQueue;
 import java.util.Properties;
+import java.util.Set;
+import java.util.Comparator;
 
 import fr.uga.pddl4j.encoding.CodedProblem;
 import fr.uga.pddl4j.parser.ErrorManager;
@@ -10,8 +16,14 @@ import fr.uga.pddl4j.planners.Statistics;
 import fr.uga.pddl4j.planners.statespace.AbstractStateSpacePlanner;
 import fr.uga.pddl4j.planners.statespace.StateSpacePlanner;
 import fr.uga.pddl4j.planners.statespace.search.strategy.StateSpaceStrategy;
+import fr.uga.pddl4j.util.BitOp;
+import fr.uga.pddl4j.util.BitState;
+import fr.uga.pddl4j.util.CondBitExp;
 import fr.uga.pddl4j.util.MemoryAgent;
 import fr.uga.pddl4j.util.Plan;
+import fr.uga.pddl4j.util.SequentialPlan;
+import heuristic.HeuristicCreator;
+import heuristic.IHeuristic;
 import fr.uga.pddl4j.heuristics.relaxation.Heuristic;
 import fr.uga.pddl4j.planners.statespace.search.strategy.AStar;
 import fr.uga.pddl4j.planners.statespace.search.strategy.Node;
@@ -40,7 +52,7 @@ public final class ASP extends AbstractStateSpacePlanner {
    * @param problem the problem to be solved.
    * @return a solution search or null if it does not exist.
    */
-  @Override
+  /*@Override
   public Plan search(final CodedProblem problem) {
     int timeout = (int) this.arguments.get(Planner.TIMEOUT);
     double weight = (double) arguments.get(StateSpacePlanner.WEIGHT);         
@@ -50,14 +62,105 @@ public final class ASP extends AbstractStateSpacePlanner {
     return astar.extractPlan(goalNode, problem);
   }
   
-  public Plan search(final CodedProblem problem, Heuristic.Type heuristic) {
+  public Plan search(final CodedProblem problem, IHeuristic.Type heuristic) {
 	    int timeout = (int) this.arguments.get(Planner.TIMEOUT);
 	    double weight = (double) arguments.get(StateSpacePlanner.WEIGHT);         
 	    StateSpaceStrategy astar = new AStar(timeout, heuristic, weight);
 	    Node goalNode = astar.searchSolutionNode(problem);
 	    Planner.getLogger().trace(problem.toString(goalNode));
 	    return astar.extractPlan(goalNode, problem);
+  }*/
+  
+  @Override
+  public Plan search(final CodedProblem problem) {
+	  
+    // First we create an instance of the heuristic to use to guide the search
+    final IHeuristic heuristic = HeuristicCreator.createHeuristic(IHeuristic.Type.FAST_FORWARD, problem);
+    
+    // We get the initial state from the planning problem
+    final BitState init = new BitState(problem.getInit());
+          
+    // We initialize the closed list of nodes (store the nodes explored)
+    final Set<Node> close = new HashSet<>();
+          
+    // We initialize the opened list to store the pending node according to function f
+    final double weight = (double) arguments.get(StateSpacePlanner.WEIGHT);
+    final PriorityQueue<Node> open = new PriorityQueue<>(100, new Comparator<Node>() {
+        public int compare(Node n1, Node n2) {
+            double f1 =  weight * n1.getHeuristic() + n1.getCost();
+            double f2 = weight * n2.getHeuristic() + n2.getCost();
+            return Double.compare(f1, f2);
+          }
+        });
+          
+    // We create the root node of the tree search
+    final Node root = new Node(init, null, -1, 0, heuristic.estimate(init, problem.getGoal()));
+     
+    // We adds the root to the list of pending nodes
+    open.add(root);
+    Plan plan = null;
+
+     final int timeout = ((int) this.arguments.get(Planner.TIMEOUT)) * 1000;
+    long time = 0;
+          
+    // We start the search
+    while (!open.isEmpty() && plan == null && time < timeout) {
+       
+      // We pop the first node in the pending list open
+      final Node current = open.poll();
+      close.add(current);
+              
+      // If the goal is satisfy in the current node then extract the search and return it
+      if (current.satisfy(problem.getGoal())) {
+        return this.extractPlan(current, problem);
+      } 
+              
+      // Else we try to apply the operators of the problem to the current node
+      else {    
+        for (int i = 0; i < problem.getOperators().size(); i++) {
+          // We get the its operator of the problem
+          BitOp a = problem.getOperators().get(i);
+          // If the operator is applicable in the current node
+          if (a.isApplicable(current)) {
+            Node next = new Node(current);
+            // We apply the effect of the operator
+            final List<CondBitExp> effects = a.getCondEffects();
+            for (CondBitExp ce : effects) {
+              if (current.satisfy(ce.getCondition())) {
+                next.apply(ce.getEffects());
+              }
+            }
+            // We set the new child node information
+            final double g = current.getCost() + 1;
+            if (!close.contains(next)) {
+              next.setCost(g);
+              next.setParent(current);
+              next.setOperator(i);
+              next.setHeuristic(heuristic.estimate(next, problem.getGoal()));
+              open.add(next);
+            }
+          }
+        }
+      }
+    }
+
+    // We compute the memory by the search
+    this.getStatistics().setMemoryUsedToSearch(MemoryAgent.sizeOf(open) + MemoryAgent.sizeOf(close));
+     
+    // Finally, we return the search computed or null if no search was found
+    return plan;   
   }
+  
+  private Plan extractPlan(final Node node, final CodedProblem problem) {
+	  Node n = node;
+	  final Plan plan = new SequentialPlan();
+	  while (n.getOperator() != -1) {
+	    final BitOp op = problem.getOperators().get(n.getOperator());
+	    plan.add(0, op);
+	    n = n.getParent();
+	  }
+	  return plan;
+	}
 
  /**
   * The main method of the <code>ASP</code> example. The command line syntax is as 
@@ -81,10 +184,9 @@ public final class ASP extends AbstractStateSpacePlanner {
   */
   public static void main(String[] args) {
 	  
-	  Heuristic.Type[] heuristics = {Heuristic.Type.FAST_FORWARD, Heuristic.Type
-			  .SUM, Heuristic.Type.MAX};
+	  IHeuristic.Type[] heuristics = {IHeuristic.Type.FAST_FORWARD, IHeuristic.Type.ONE_FOR_ALL};
 	  
-	  for(Heuristic.Type heuristic: heuristics) {
+	  for(IHeuristic.Type heuristic: heuristics) {
 		  
 	  System.out.println("Executando A* para heurística: " + heuristic.name());
 	  
@@ -127,7 +229,7 @@ public final class ASP extends AbstractStateSpacePlanner {
 		}
 	  
 	  long begin = System.currentTimeMillis();
-	  final Plan plan = planner.search(pb, Heuristic.Type.SUM);
+	  final Plan plan = planner.search(pb);
 	  planner.getStatistics().setTimeToSearch(System.currentTimeMillis() - begin);
 	  planner.getStatistics().setMemoryUsedForProblemRepresentation(MemoryAgent.getDeepSizeOf(pb));
 	  
