@@ -52,17 +52,18 @@ public final class ASP extends AbstractStateSpacePlanner {
    * @param problem the problem to be solved.
    * @return a solution search or null if it does not exist.
    */
-  /*@Override
+  @Override
   public Plan search(final CodedProblem problem) {
-    int timeout = (int) this.arguments.get(Planner.TIMEOUT);
+	throw new UnsupportedOperationException();
+    /*int timeout = (int) this.arguments.get(Planner.TIMEOUT);
     double weight = (double) arguments.get(StateSpacePlanner.WEIGHT);         
     StateSpaceStrategy astar = new AStar(timeout, Heuristic.Type.FAST_FORWARD, weight);
     Node goalNode = astar.searchSolutionNode(problem);
     Planner.getLogger().trace(problem.toString(goalNode));
-    return astar.extractPlan(goalNode, problem);
+    return astar.extractPlan(goalNode, problem);*/
   }
   
-  public Plan search(final CodedProblem problem, IHeuristic.Type heuristic) {
+  /*public Plan search(final CodedProblem problem, IHeuristic.Type heuristic) {
 	    int timeout = (int) this.arguments.get(Planner.TIMEOUT);
 	    double weight = (double) arguments.get(StateSpacePlanner.WEIGHT);         
 	    StateSpaceStrategy astar = new AStar(timeout, heuristic, weight);
@@ -71,11 +72,13 @@ public final class ASP extends AbstractStateSpacePlanner {
 	    return astar.extractPlan(goalNode, problem);
   }*/
   
-  @Override
-  public Plan search(final CodedProblem problem) {
+  public Plan search(final CodedProblem problem, final IHeuristic.Type type) {
+	  
+	int visitedNodes = 0;
+	int createdNodes = 0;
 	  
     // First we create an instance of the heuristic to use to guide the search
-    final IHeuristic heuristic = HeuristicCreator.createHeuristic(IHeuristic.Type.FAST_FORWARD, problem);
+    final IHeuristic heuristic = HeuristicCreator.createHeuristic(type, problem);
     
     // We get the initial state from the planning problem
     final BitState init = new BitState(problem.getInit());
@@ -98,6 +101,7 @@ public final class ASP extends AbstractStateSpacePlanner {
      
     // We adds the root to the list of pending nodes
     open.add(root);
+    
     Plan plan = null;
 
      final int timeout = ((int) this.arguments.get(Planner.TIMEOUT)) * 1000;
@@ -108,10 +112,14 @@ public final class ASP extends AbstractStateSpacePlanner {
        
       // We pop the first node in the pending list open
       final Node current = open.poll();
+      //visitado
       close.add(current);
+      visitedNodes++;
               
       // If the goal is satisfy in the current node then extract the search and return it
       if (current.satisfy(problem.getGoal())) {
+    	System.out.println("VISITADOSSSSSSSSSSSSSSSSSSSSSS " + visitedNodes);
+    	System.out.println("CRIADOSSSSSSSSSSSSSSSSSSSSSSSS " + createdNodes);
         return this.extractPlan(current, problem);
       } 
               
@@ -123,6 +131,7 @@ public final class ASP extends AbstractStateSpacePlanner {
           // If the operator is applicable in the current node
           if (a.isApplicable(current)) {
             Node next = new Node(current);
+            createdNodes++;
             // We apply the effect of the operator
             final List<CondBitExp> effects = a.getCondEffects();
             for (CondBitExp ce : effects) {
@@ -143,10 +152,9 @@ public final class ASP extends AbstractStateSpacePlanner {
         }
       }
     }
-
-    // We compute the memory by the search
-    this.getStatistics().setMemoryUsedToSearch(MemoryAgent.sizeOf(open) + MemoryAgent.sizeOf(close));
-     
+    
+	System.out.println("VISITADOSSSSSSSSSSSSSSSSSSSSSS " + visitedNodes);
+	System.out.println("CRIADOSSSSSSSSSSSSSSSSSSSSSSSS " + createdNodes);
     // Finally, we return the search computed or null if no search was found
     return plan;   
   }
@@ -229,9 +237,8 @@ public final class ASP extends AbstractStateSpacePlanner {
 		}
 	  
 	  long begin = System.currentTimeMillis();
-	  final Plan plan = planner.search(pb);
+	  final Plan plan = planner.search(pb, heuristic);
 	  planner.getStatistics().setTimeToSearch(System.currentTimeMillis() - begin);
-	  planner.getStatistics().setMemoryUsedForProblemRepresentation(MemoryAgent.getDeepSizeOf(pb));
 	  
 	  if (plan != null) {
 	    // Print plan information
@@ -250,12 +257,6 @@ public final class ASP extends AbstractStateSpacePlanner {
 	  Planner.getLogger().trace(String.format("              %8.4f seconds encoding %n", info.getTimeToEncode()/1000.0));
 	  Planner.getLogger().trace(String.format("              %8.4f seconds searching%n", info.getTimeToSearch()/1000.0));
 	  Planner.getLogger().trace(String.format("              %8.4f seconds total time%n", time/1000.0));
-	      	
-	  // Print memory usage information
-	  long memory = info.getMemoryUsedForProblemRepresentation() + info.getMemoryUsedToSearch();
-	  Planner.getLogger().trace(String.format("%nmemory used:  %8.2f MBytes for problem representation%n", info.getMemoryUsedForProblemRepresentation()/(1024.0*1024.0)));
-	  Planner.getLogger().trace(String.format("              %8.2f MBytes for searching%n", info.getMemoryUsedToSearch()/(1024.0*1024.0)));
-	  Planner.getLogger().trace(String.format("              %8.2f MBytes total%n%n%n", memory/(1024.0*1024.0)));
 	  }
   }
   
