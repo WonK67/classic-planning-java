@@ -107,9 +107,9 @@ public final class ASP extends AbstractStateSpacePlanner {
 			// If the goal is satisfy in the current node then extract the search and return
 			// it
 			if (current.satisfy(problem.getGoal())) {
-				System.out.println("\nFator de ramificação: " + ((double) createdNodes) / ((double) visitedNodes));
-				System.out.println("\nNós visitados: " + visitedNodes);
-				System.out.println("\nNós gerados: " + createdNodes);
+				System.out.println("\nFator de ramificacao: " + ((double) createdNodes) / ((double) visitedNodes));
+				System.out.println("\nNos visitados: " + visitedNodes);
+				System.out.println("\nNos gerados: " + createdNodes);
 				return this.extractPlan(current, problem);
 			}
 
@@ -143,9 +143,9 @@ public final class ASP extends AbstractStateSpacePlanner {
 			}
 		}
 
-		System.out.println("\nFator de ramificação: " + ((double) createdNodes) / ((double) visitedNodes));
-		System.out.println("\nNós visitados: " + visitedNodes);
-		System.out.println("\nNós gerados: " + createdNodes);
+		System.out.println("\nFator de ramificacao: " + ((double) createdNodes) / ((double) visitedNodes));
+		System.out.println("\nNos visitados: " + visitedNodes);
+		System.out.println("\nNos gerados: " + createdNodes);
 		// Finally, we return the search computed or null if no search was found
 		return plan;
 	}
@@ -172,7 +172,7 @@ public final class ASP extends AbstractStateSpacePlanner {
 			String problem = String.format("resources/robot/problem%d.pddl", i);
 			definition.put(Planner.PROBLEM, new File(problem));
 			definition.put(StateSpacePlanner.WEIGHT, 1.0);
-			definition.put(Planner.TIMEOUT, 300); //in seconds
+			definition.put(Planner.TIMEOUT, 86400); //in seconds
 			definitions.add(definition);
 		}
 		
@@ -192,12 +192,12 @@ public final class ASP extends AbstractStateSpacePlanner {
 	
 	private static void runSearches(Properties pddlDefinition) {
 		System.out.println("/////////////////////////////////////////////////////////////////////////////////////////////////////////////");
-		System.out.println(String.format("Executando para domínio %s e problema %s", pddlDefinition.get(Planner.DOMAIN).toString(), pddlDefinition.get(Planner.PROBLEM).toString()));
+		System.out.println(String.format("Executando para dominio %s e problema %s", pddlDefinition.get(Planner.DOMAIN).toString(), pddlDefinition.get(Planner.PROBLEM).toString()));
 		System.out.println("/////////////////////////////////////////////////////////////////////////////////////////////////////////////");
 		for (IHeuristic.Type heuristic : IHeuristic.Type.values()) {
 			
 			System.out.println("---------------------------------------------");
-			System.out.println("\nExecutando A* para heurística: " + heuristic.name());
+			System.out.println("\nExecutando A* para heuristica: " + heuristic.name());
 
 			if (pddlDefinition == null) {
 				ASP.printUsage();
