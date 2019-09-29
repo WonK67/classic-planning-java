@@ -29,16 +29,18 @@ public class HeuristicCreator {
      * @throws NullPointerException if <code>type == null || problem == null</code>.
      */
     public static IHeuristic createHeuristic(final IHeuristic.Type type, final CodedProblem problem) {
-        IHeuristic heuristic = null;
+        IHeuristic heuristic;
         if (type.equals(IHeuristic.Type.FAST_FORWARD)) {
             heuristic = new FastForwardHeuristic(problem);
         } else if (type.equals(IHeuristic.Type.ONE_FOR_ALL)) {
             heuristic = new OneForAllHeuristic();
-        }/* else if (type.equals(IHeuristic.Type.SUM)) {
-            heuristic = new Sum(problem);
+        } else if (type.equals(IHeuristic.Type.SUM)) {
+            heuristic = new SumHeuristic(problem);
         } else if (type.equals(IHeuristic.Type.MAX)) {
-            heuristic = new Max(problem);
-        }*/
+            heuristic = new MaxHeuristic(problem);
+        } else {
+        	throw new UnsupportedOperationException();
+        }
         return heuristic;
     }
 }
