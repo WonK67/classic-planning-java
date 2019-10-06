@@ -75,11 +75,10 @@ public final class ASP extends AbstractStateSpacePlanner {
 
 		// We initialize the opened list to store the pending node according to function
 		// f
-		final double weight = (double) arguments.get(StateSpacePlanner.WEIGHT);
 		final PriorityQueue<Node> open = new PriorityQueue<>(100, new Comparator<Node>() {
 			public int compare(Node n1, Node n2) {
-				double f1 = weight * n1.getHeuristic() + n1.getCost();
-				double f2 = weight * n2.getHeuristic() + n2.getCost();
+				double f1 =  n1.getHeuristic() + n1.getCost();
+				double f2 = n2.getHeuristic() + n2.getCost();
 				return Double.compare(f1, f2);
 			}
 		});
@@ -92,11 +91,10 @@ public final class ASP extends AbstractStateSpacePlanner {
 
 		Plan plan = null;
 
-		final int timeout = ((int) this.arguments.get(Planner.TIMEOUT)) * 1000;
 		long time = 0;
 
 		// We start the search
-		while (!open.isEmpty() && plan == null && time < timeout) {
+		while (!open.isEmpty() && plan == null) {
 
 			// We pop the first node in the pending list open
 			final Node current = open.poll();
@@ -165,27 +163,23 @@ public final class ASP extends AbstractStateSpacePlanner {
 		List<Properties> definitions = new ArrayList<>();
 		
 		//Robot problem
-		for(int i = 1; i <= 9; i++) {
+		for(int i = 8; i <= 9; i++) {
 			Properties definition = new Properties();
 			String domain = "resources/robot/domain.pddl";
 			definition.put(Planner.DOMAIN, new File(domain));
 			String problem = String.format("resources/robot/problem%d.pddl", i);
 			definition.put(Planner.PROBLEM, new File(problem));
-			definition.put(StateSpacePlanner.WEIGHT, 1.0);
-			definition.put(Planner.TIMEOUT, 86400); //in seconds
 			definitions.add(definition);
 		}
 		
-		/*for(int i = 1; i <= 1; i++) {
+		for(int i = 1; i <= 1; i++) {
 			Properties definition = new Properties();
 			String domain = "resources/tyreworld/domain.pddl";
 			definition.put(Planner.DOMAIN, new File(domain));
-			String problem = String.format("resources/tyreworld/problem.pddl", i);
+			String problem = "resources/tyreworld/problem.pddl";
 			definition.put(Planner.PROBLEM, new File(problem));
-			definition.put(StateSpacePlanner.WEIGHT, 1.0);
-			definition.put(Planner.TIMEOUT, 300); //in seconds
 			definitions.add(definition);
-		}*/
+		}
 		
 		return definitions;
 	}
@@ -194,7 +188,8 @@ public final class ASP extends AbstractStateSpacePlanner {
 		System.out.println("/////////////////////////////////////////////////////////////////////////////////////////////////////////////");
 		System.out.println(String.format("Executando para dominio %s e problema %s", pddlDefinition.get(Planner.DOMAIN).toString(), pddlDefinition.get(Planner.PROBLEM).toString()));
 		System.out.println("/////////////////////////////////////////////////////////////////////////////////////////////////////////////");
-		for (IHeuristic.Type heuristic : IHeuristic.Type.values()) {
+		IHeuristic.Type[] heuristics = {IHeuristic.Type.FAST_FORWARD, IHeuristic.Type.SUM, IHeuristic.Type.MAX, IHeuristic.Type.ONE_FOR_ALL};
+		for (IHeuristic.Type heuristic : heuristics) {
 			
 			System.out.println("---------------------------------------------");
 			System.out.println("\nExecutando A* para heuristica: " + heuristic.name());
@@ -329,16 +324,6 @@ public final class ASP extends AbstractStateSpacePlanner {
 				if (!new File(args[i + 1]).exists())
 					return null;
 				arguments.put(Planner.PROBLEM, new File(args[i + 1]));
-			} else if ("-t".equalsIgnoreCase(args[i]) && ((i + 1) < args.length)) {
-				final int timeout = Integer.parseInt(args[i + 1]) * 1000;
-				if (timeout < 0)
-					return null;
-				arguments.put(Planner.TIMEOUT, timeout);
-			} else if ("-w".equalsIgnoreCase(args[i]) && ((i + 1) < args.length)) {
-				final double weight = Double.parseDouble(args[i + 1]);
-				if (weight < 0)
-					return null;
-				arguments.put(StateSpacePlanner.WEIGHT, weight);
 			} else {
 				return null;
 			}
