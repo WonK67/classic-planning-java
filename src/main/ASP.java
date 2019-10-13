@@ -163,7 +163,7 @@ public final class ASP extends AbstractStateSpacePlanner {
 		List<Properties> definitions = new ArrayList<>();
 		
 		//Robot problem
-		for(int i = 8; i <= 9; i++) {
+		for(int i = 1; i <= 9; i++) {
 			Properties definition = new Properties();
 			String domain = "resources/robot/domain.pddl";
 			definition.put(Planner.DOMAIN, new File(domain));
@@ -204,6 +204,11 @@ public final class ASP extends AbstractStateSpacePlanner {
 
 			File domain = (File) pddlDefinition.get(Planner.DOMAIN);
 			File problem = (File) pddlDefinition.get(Planner.PROBLEM);
+			
+			//skip one-for-all to avoid out of memory error (p7,p8,p9)
+			if(heuristic.equals(IHeuristic.Type.ONE_FOR_ALL) && (problem.toString().contains("7") || problem.toString().contains("8") || problem.toString().contains("9")))
+				continue;
+			
 			ErrorManager errorManager = null;
 			try {
 				errorManager = factory.parse(domain, problem);
